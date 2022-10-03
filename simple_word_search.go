@@ -55,18 +55,31 @@ func FindWordInAllFiles(word, path string) []FindInfo {
 		return findInfos
 	}
 
+	ch := make(chan FindInfo)
+	cnt := len(filelist)
+	recvCnt := 0
+
 	for _, filename := range filelist {
-		findInfos = append(findInfos, FindWordInFile(word, filename))
+		go FindWordInFile(word, filename ,ch)
+	}
+
+	for findInfo := range ch {
+		findInfos = append(findInfos, findInfo)
+		recvCnt++
+		if recvCnt == cnt {
+			break
+		}
 	}
 	return findInfos
 }
 
-func FindWordInFile(word, filename string) FindInfo  {
+func FindWordInFile(word, filename string, ch chan FindInfo) {
 	findInfo := FindInfo{filename, []LineInfo{}}
 	file, err := os.Open(filename)	
 	if err != nil {
 		fmt.Println("파일을 찾을 수 없습니다. ", filename)
-		return findInfo
+		ch <- findInfo
+		return
 	}
 	defer file.Close()
 
@@ -80,5 +93,5 @@ func FindWordInFile(word, filename string) FindInfo  {
 		}
 		lineNo++
 	}
-	return findInfo
+	ch <- findInfo
 }
